@@ -6,6 +6,7 @@ use App\Filament\Resources\Shop\OrderResource;
 use App\Models\Address;
 use App\Models\Blog\Author;
 use App\Models\Blog\Category as BlogCategory;
+use App\Models\Blog\Link;
 use App\Models\Blog\Post;
 use App\Models\Comment;
 use App\Models\Shop\Brand;
@@ -20,16 +21,18 @@ use Closure;
 use Filament\Notifications\Actions\Action;
 use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Query\Expression;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\Console\Helper\ProgressBar;
 
 class DatabaseSeeder extends Seeder
 {
-    const IMAGE_URL = 'https://source.unsplash.com/random/200x200/?img=1';
-
     public function run(): void
     {
+        DB::raw('SET time_zone=\'+00:00\'');
+
         // Clear images
         Storage::deleteDirectory('public');
 
@@ -46,6 +49,7 @@ class DatabaseSeeder extends Seeder
         $brands = $this->withProgressBar(20, fn () => Brand::factory()->count(20)
             ->has(Address::factory()->count(rand(1, 3)))
             ->create());
+        Brand::query()->update(['sort' => new Expression('id')]);
         $this->command->info('Shop brands created.');
 
         $this->command->warn(PHP_EOL . 'Creating shop categories...');
@@ -117,6 +121,12 @@ class DatabaseSeeder extends Seeder
             )
             ->create());
         $this->command->info('Blog authors and posts created.');
+
+        $this->command->warn(PHP_EOL . 'Creating blog links...');
+        $this->withProgressBar(20, fn () => Link::factory(1)
+            ->count(20)
+            ->create());
+        $this->command->info('Blog links created.');
     }
 
     protected function withProgressBar(int $amount, Closure $createCollectionOfOne): Collection
@@ -125,7 +135,7 @@ class DatabaseSeeder extends Seeder
 
         $progressBar->start();
 
-        $items = new Collection();
+        $items = new Collection;
 
         foreach (range(1, $amount) as $i) {
             $items = $items->merge(
